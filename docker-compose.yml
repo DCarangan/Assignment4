@@ -1,23 +1,47 @@
+version: "3.9"
+
 services:
-  rng:
-    build: rng
+  nodejs:
+    build:
+      context: ./node-app
+      dockerfile: Dockerfile
+    container_name: nodejs
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - MONGO_USERNAME=${MONGO_USERNAME}
+      - MONGO_PASSWORD=${MONGO_PASSWORD}
+      - MONGO_HOSTNAME=db
+      - MONGO_PORT=27017
+      - MONGO_DB=sharkinfo
     ports:
-    - "8001:80"
-
-  hasher:
-    build: hasher
-    ports:
-    - "8002:80"
-
-  webui:
-    build: webui
-    ports:
-    - "8080:80"
+      - "8080:8080"
     volumes:
-    - "./webui/files/:/files/"
+      - ./node-app:/home/node/app
+      - node_modules:/home/node/app/node_modules
+    depends_on:
+      - db
+    networks:
+      - app-network
+    command: npm run dev
 
-  redis:
-    image: redis
+  db:
+    image: mongo:6
+    container_name: mongo
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD}
+    volumes:
+      - dbdata:/data/db
+    networks:
+      - app-network
 
-  worker:
-    build: worker
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  dbdata:
+  node_modules:
